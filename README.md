@@ -1,7 +1,7 @@
-| ✓ | Year | Competition             | Challenge           |
+| ✓ | Year | CTF                     | Task                |
 |---|------|-------------------------|---------------------|
-|   | 2017 | 34C3 CTF                | v9                  | 
-|   | 2018 | 35C3 CTF                | krautflare          |
+|   | 2017 | 34c3 CTF                | v9                  | 
+|   | 2018 | 35c3 CTF                | krautflare          |
 |   | 2018 | Google Capture The Flag | Just In Time        |
 |   | 2018 | PlaidCTF                | roll a d8           |
 |   | 2019 | \*CTF                   | oob-v8              |
