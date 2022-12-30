@@ -1,0 +1,90 @@
+diff --git a/js/src/vm/ArrayBufferObject.cpp b/js/src/vm/ArrayBufferObject.cpp
+--- a/js/src/vm/ArrayBufferObject.cpp
++++ b/js/src/vm/ArrayBufferObject.cpp
+@@ -336,7 +336,7 @@ static const JSFunctionSpec arraybuffer_
+     JS_SELF_HOSTED_FN("slice", "ArrayBufferSlice", 2, 0), JS_FS_END};
+ 
+ static const JSPropertySpec arraybuffer_proto_properties[] = {
+-    JS_PSG("byteLength", ArrayBufferObject::byteLengthGetter, 0),
++    JS_PSGS("byteLength", ArrayBufferObject::byteLengthGetter, ArrayBufferObject::byteLengthSetter, 0),
+     JS_STRING_SYM_PS(toStringTag, "ArrayBuffer", JSPROP_READONLY), JS_PS_END};
+ 
+ static const ClassSpec ArrayBufferObjectClassSpec = {
+@@ -377,12 +377,50 @@ MOZ_ALWAYS_INLINE bool ArrayBufferObject
+   return true;
+ }
+ 
++MOZ_ALWAYS_INLINE bool ArrayBufferObject::byteLengthSetterImpl(
++    JSContext* cx, const CallArgs& args) {
++  MOZ_ASSERT(IsArrayBuffer(args.thisv()));
++
++  // Steps 1-2
++  auto* buffer = &args.thisv().toObject().as<ArrayBufferObject>();
++  if (buffer->isDetached()) {
++    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
++                              JSMSG_TYPED_ARRAY_DETACHED);
++    return false;
++  }
++
++  // Step 3
++  double targetLength;
++  if (!ToInteger(cx, args.get(0), &targetLength)) {
++    return false;
++  }
++
++  if (buffer->isDetached()) { // Could have been detached during argument processing
++    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
++                              JSMSG_TYPED_ARRAY_DETACHED);
++    return false;
++  }
++
++  // Step 4
++  buffer->setByteLength(targetLength);
++
++  args.rval().setUndefined();
++  return true;
++}
++
+ bool ArrayBufferObject::byteLengthGetter(JSContext* cx, unsigned argc,
+                                          Value* vp) {
+   CallArgs args = CallArgsFromVp(argc, vp);
+   return CallNonGenericMethod<IsArrayBuffer, byteLengthGetterImpl>(cx, args);
+ }
+ 
++bool ArrayBufferObject::byteLengthSetter(JSContext* cx, unsigned argc,
++                                         Value* vp) {
++  CallArgs args = CallArgsFromVp(argc, vp);
++  return CallNonGenericMethod<IsArrayBuffer, byteLengthSetterImpl>(cx, args);
++}
++
++
+ /*
+  * ArrayBuffer.isView(obj); ES6 (Dec 2013 draft) 24.1.3.1
+  */
+@@ -1000,7 +1038,7 @@ inline size_t ArrayBufferObject::associa
+ }
+ 
+ void ArrayBufferObject::setByteLength(size_t length) {
+-  MOZ_ASSERT(length <= maxBufferByteLength());
++//  MOZ_ASSERT(length <= maxBufferByteLength());
+   setFixedSlot(BYTE_LENGTH_SLOT, PrivateValue(length));
+ }
+ 
+diff --git a/js/src/vm/ArrayBufferObject.h b/js/src/vm/ArrayBufferObject.h
+--- a/js/src/vm/ArrayBufferObject.h
++++ b/js/src/vm/ArrayBufferObject.h
+@@ -166,6 +166,7 @@ using MutableHandleArrayBufferObjectMayb
+  */
+ class ArrayBufferObject : public ArrayBufferObjectMaybeShared {
+   static bool byteLengthGetterImpl(JSContext* cx, const CallArgs& args);
++  static bool byteLengthSetterImpl(JSContext* cx, const CallArgs& args);
+ 
+  public:
+   static const uint8_t DATA_SLOT = 0;
+@@ -337,6 +338,7 @@ class ArrayBufferObject : public ArrayBu
+   static const JSClass protoClass_;
+ 
+   static bool byteLengthGetter(JSContext* cx, unsigned argc, Value* vp);
++  static bool byteLengthSetter(JSContext* cx, unsigned argc, Value* vp);
+ 
+   static bool fun_isView(JSContext* cx, unsigned argc, Value* vp);
